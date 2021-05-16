@@ -13,9 +13,11 @@ f1 prend 2 arguments
 
 ```
 f1 a1 a2
+```
 
 l'un des arguments peut être une liste
 
+```
 f1 (a11 a12) a2
 ```
 
