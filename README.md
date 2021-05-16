@@ -1,5 +1,7 @@
 # kent
 
+
+
 ## syntaxe
 
 préfixée façon logo
@@ -21,6 +23,8 @@ l'un des arguments peut être une liste
 f1 (a11 a12) a2
 ```
 
+
+
 ## sémantique
 
 sequence et select des behavior trees
@@ -40,8 +44,8 @@ sequence = procedure
 `fun` comme constructeur de fonctions
 
 
-### Icon
 
+### Icon
 
 ```
 as enter fun (house) goal (
@@ -126,7 +130,11 @@ as from-to fun (start end) seq (
 )
 ```
 
+
+
 ### Dekorte's Io
+
+
 
 #### contrôle
 
@@ -150,6 +158,8 @@ as my-ife ctrl (condition if-true if-false) goal (
 )
 ```
 
+
+
 #### code litéral
 
 du coup on créé un litéral pour le code
@@ -161,6 +171,8 @@ write 'add 1 1
 affichera `add 1 1`
 
 le 1er élément est quoté, l'arité est respectée.
+
+
 
 
 #### objets
@@ -175,6 +187,8 @@ write of Malcom info
 
 ```
 
+
+
 #### délégation
 
 `has` et `isa` sont des slots spéciaux
@@ -186,6 +200,8 @@ lors d'une délégation :
 
 * `this` représente l'exécutant pour un composant 
 * `this` représente le receveur pour un prototype
+
+
 
 ### Eno
 
@@ -200,6 +216,20 @@ le contenu de la section est accessible comme variable
   y: 6
   
   show-sum: fun () write add x y
+
+  L: (1 2 3)
+
+  L:
+  - 1
+  - 2
+  - 3
+
+  O: { x 1, y 2, z 3 }
+
+  O:
+  x = 1
+  y = 2
+  z = 3
 ```
 
 les sous-sections sont accessibles comme objets
