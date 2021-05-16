@@ -54,16 +54,18 @@ play enter home
 
 
 as locate fun (s)
-  while as line read
-    if find s line, write line
-
+  while as line read, seq (
+    if find s line
+    write line
+  )
 
 
 as locate fun (s) seq (
   as lineno 0
   while as line read, seq (
     as lineno add lineno 1
-    if find s line, write (lineno ": " line)
+    if find s line
+    write (lineno ": " line)
   )
 )
 ```
@@ -73,8 +75,10 @@ as locate fun (s) seq (
 as countm fun (s) seq (
 
   as count 0
-  while as line read
-    if match s line, incr count
+  while as line read, seq (
+    if match s line
+    incr count
+  )
   up count
 )
 ```
@@ -99,22 +103,14 @@ every as i find s1 s2 write i
 **page 21**
 
 ```
-if eq i or (0 1) write "ok"
+if eq i or (0 1)
+write "ok"
 
-every as i or (0 1) write i
+every as i or (0 1)
+write i
 
-if find s1 and (s2 s3) write "ok"
-```
-
-**page 24**
-
-```
-as i 0
-repeat seq (
-  if eq i 2 continue
-  write i
-  if eq i 8 break
-)
+if find s1 and (s2 s3)
+write "ok"
 ```
 
 **page 31**
@@ -141,10 +137,16 @@ les expressions doivent pouvoir être évaluées manuellement
 `ctrl` à la place de `fun` pour les contrôles
 
 ```
-as my-ife ctrl (condition if-true if-false) seq (
+as my-ife ctrl (condition if-true if-false) goal (
 
-  if eval condition seq (eval if-true, up)
-  if not eval condition seq (eval if-false, up)
+  seq (
+    if eval condition
+    seq (eval if-true, up)
+  )
+  seq (
+    if not eval condition
+    seq (eval if-false, up)
+  )
 )
 ```
 
