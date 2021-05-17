@@ -389,15 +389,9 @@ show affiche 64
 ### peg parser
 
 
+
+
 ```
-texte
-= phrase+
-
-phrase
-= lettre* "."
-
-lettre
-= voyelle / consonne
 
 
 as voyelle / char "aeiou"
