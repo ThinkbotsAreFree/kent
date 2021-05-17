@@ -327,6 +327,9 @@ seq(
 )
 ```
 
+**page 61** - 4.4.1 Dynamic Expansion of BTs
+
+sélection de l'action basée sur une recherche en fonction de features.
 
 
 ```
