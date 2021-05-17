@@ -333,6 +333,83 @@ sélection de l'action basée sur une recherche en fonction de features.
 
 
 ```
+countw: fun (s) seq (
+  as lineno 0
+  while seq (
+    as line read
+    incr lineno
+    seq (
+      find s line
+      write (lineno ": " line)
+    )
+  )
+)
+```
+
+
+calcul d'utilité
+
+```
+best (
+
+  hi 2 seq (
+    write "good"
+  )
+  
+  hi 3 seq (
+    write "better"
+  )
+)
+```
+
+gen
+
+```
+tens: gen (i) while seq (
+  yield i
+  as i + i 10
+)
+
+show: seq (
+  gt
+    as x tens 4
+    55
+  write x
+)
+
+```
+
+show affiche 64
+
+
+
+### string scanning
+
+
+
+```
+in txt scan
+
+in "abcde" seq(
+  tab 3
+  while write move 1
+)
+
+```
+→ cde
+
+
+```
+in "abcde" find "d"
+```
+
+→ 4
+
+
+
+
+
+```
 
 
 
