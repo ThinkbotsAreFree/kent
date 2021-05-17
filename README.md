@@ -394,15 +394,16 @@ in "abcde" seq(
   tab 3
   while write move 1
 )
-
 ```
 → cde
 
 
 ```
+every write in text find "the"
+
 in "abcde" find "d"
 ```
-
+→ ...
 → 4
 
 
