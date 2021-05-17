@@ -263,6 +263,36 @@ les sections soeurs aussi, toujours en syntaxe filesystem
 
 
 
+### BT
+
+**page 46**
+
+```
+goal (
+  if agent-has-passed
+  seq ( if door-open, pass-through-door )
+  seq ( if door-unlocked, open-door )
+  seq ( if has-key, unlock-door )
+)
+```
+
+**page 48**
+
+```
+seq (
+  goal (
+    if and
+      > battery-level 20%
+      not recharging
+    recharge-battery
+  )
+  do-main-task
+)
+```
+
+
+
+
 ```
 
 
