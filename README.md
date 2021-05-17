@@ -290,6 +290,42 @@ seq (
 )
 ```
 
+**page 55**
+
+```
+seq(
+  goal (
+    if no-cops-nearby
+    escape
+    fight-cops
+  )
+  goal (
+    seq (if has-money spend-money)
+    seq (if money-nearby steal-money)
+    seq (if house-nearby
+      goal (
+        if is-inside-house
+        seq (
+          goal (
+            if door-is-open
+            seq (
+              if door-is-unlocked
+              open-door
+            )
+            seq (
+              if has-crowbar
+              if door-is-weak
+              brake-door-open
+            )
+          )
+          go-inside
+        )
+      )
+    )
+    drive-around
+  )  
+)
+```
 
 
 
