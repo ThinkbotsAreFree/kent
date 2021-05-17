@@ -282,7 +282,7 @@ goal (
 seq (
   goal (
     if and
-      > battery-level 20%
+      gt battery-level 20%
       not recharging
     recharge-battery
   )
