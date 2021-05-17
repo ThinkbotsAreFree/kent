@@ -383,32 +383,32 @@ show affiche 64
 
 
 
-### string scanning
+
+
+
+### peg parser
+
+
+```
+texte
+= phrase+
+
+phrase
+= lettre* "."
+
+lettre
+= voyelle / consonne
+
+
+as voyelle / char "aeiou"
+as lettre / (voyelle consonne)
+as phrase - (lettre* ".")
+as texte - (titre? phrase+)
 
 
 
 ```
-in txt scan
-
-in "abcde" seq(
-  tab 3
-  while write move 1
-)
-```
-→ cde
-
-
-```
-every write in text find "the"
-
-in "abcde" find "d"
-```
-→ ...
-
-→ 4
-
-
-
+ho ho ho
 
 
 ```
