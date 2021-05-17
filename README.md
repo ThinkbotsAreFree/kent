@@ -396,7 +396,7 @@ show affiche 64
 
 as voyelle / char "aeiou"
 as lettre / (voyelle consonne)
-as phrase - (lettre* ".")
+as phrase - (ph> lettre* ".")
 as texte - (titre? phrase+)
 
 
