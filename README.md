@@ -295,26 +295,26 @@ seq (
 ```
 seq(
   goal (
-    no-cops-nearby
+    no-cops-nearby?
     escape
     fight-cops
   )
   goal (
-    seq (has-money spend-money)
-    seq (money-nearby steal-money)
-    seq (house-nearby
+    seq (has-money? spend-money)
+    seq (money-nearby? steal-money)
+    seq (house-nearby?
       goal (
-        is-inside-house
+        is-inside-house?
         seq (
           goal (
-            door-is-open
+            door-is-open?
             seq (
-              door-is-unlocked
+              door-is-unlocked?
               open-door
             )
             seq (
-              has-crowbar
-              door-is-weak
+              has-crowbar?
+              door-is-weak?
               brake-door-open
             )
           )
