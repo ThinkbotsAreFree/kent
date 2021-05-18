@@ -12,4 +12,4 @@ Kent est un langage de très haut niveau, avec les caractéristiques suivantes :
 
 Il est développé en même temps que son IDE façon "éditeur de scènes" arborescent.
 
-Ho ho ho.
+🎅 Ho ho ho.
