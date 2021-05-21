@@ -1,33 +1,10 @@
-//const enolib = require('enolib');
-
-
-
-/*
-const codeBlockEnoType = src => {
-
-    return Kent.prototype.buildAST(src);
-};
-
-enolib.register({ codeBlockEnoType });
-*/
 
 
 
 const Success = Symbol("Success");
 const Failure = Symbol("Failure");
 const Running = Symbol("Running");
-
-
-/*
-    types:
-    seq =       composite
-    goal =      composite
-    loop =      decorator
-    while =     decorator
-    until =     decorator
-    succeed =   terminal
-    fail =      terminal
-*/
+const Pending = Symbol("Pending");
 
 
 
@@ -36,23 +13,6 @@ function Kent(src) {
     this.env = [];
 
     if (src) this.buildAST(src);
-}
-
-
-
-Kent.prototype.baseArity = {
-
-    "succeed": 0,
-    "fail": 0,
-    "js": 1,
-    "while": 1,
-    "until": 1,
-    "seq": 1,
-    "goal": 1,
-    "all": 1,
-
-    "log": 1,
-    "add": 2
 }
 
 
@@ -70,14 +30,14 @@ Kent.prototype.buildAST = function (src) {
 
 
 
-Kent.prototype.traverseEno = function(node, callback, parent) {
+Kent.prototype.traverseEno = function (node, callback, parent) {
 
     callback.call(this, node, parent);
 
     let children = node.elements || node.entries || node.items || node.code || node.group || node.path;
 
     if (children) for (let c = 0; c < children.length; c++) {
-        
+
         this.traverseEno(children[c], callback, node);
     }
 }
@@ -86,13 +46,13 @@ Kent.prototype.traverseEno = function(node, callback, parent) {
 
 Kent.prototype.codeParseAST = function (ast) {
 
-    this.traverseEno(ast, function(node, parent) {
+    this.traverseEno(ast, function (node, parent) {
 
         try {
+
             if ("value" in node) node.code = codeParser.parse(node.value);
-        } catch(e) {
-            // log("[parser]", e.message);
-        }
+
+        } catch (e) { }
     });
 }
 
@@ -100,7 +60,7 @@ Kent.prototype.codeParseAST = function (ast) {
 
 Kent.prototype.decorateWithParentsAST = function (ast) {
 
-    this.traverseEno(ast, function(node, parent) {
+    this.traverseEno(ast, function (node, parent) {
 
         node.parent = parent;
     });
@@ -110,7 +70,7 @@ Kent.prototype.decorateWithParentsAST = function (ast) {
 
 Kent.prototype.step = function () {
 
-    this.traverseEno(this.ast, function(node, parent) {
+    this.traverseEno(this.ast, function (node, parent) {
 
         if (node.key === "script" && node.code) {
 
@@ -121,84 +81,74 @@ Kent.prototype.step = function () {
 
 
 
-Kent.prototype.executeScript = function (rawcode) {
+Kent.prototype.executeScript = function (code) {
 
-    let code = rawcode.slice(0);
+    this.newEnv(code);
 
-    this.newEnv();
-    
-    while (this.env[0].ip < code.length) {
+    while (this.env[0].ip < this.env[0].code.length) {
 
-        let token = Object.assign(
-            {},
-            code[this.env[0].ip],
-            { arity: this.getArity(code[this.env[0].ip]) }
-        );
-
-        if (token.arity > 0)
-            this.env[0].cmds.unshift(token);
-        else
-            this.env[0].args.unshift(token);
-
-        if (this.env[0].args.length >= this.env[0].cmds[0].arity) {
-
-            let args = this.env[0].args.slice(0, this.env[0].cmds[0].arity);
-            this.env[0].args = this.env[0].args.slice(this.env[0].cmds[0].arity);
-
-            let cmd = this.env[0].cmds[0];
-            this.env[0].cmds.shift();
-
-            let result = this.execute(cmd, args);
-            
-            if (Array.isArray(result)) code.splice(this.env[0].ip + 1, 0, ...result);
-        }
+        this.execute();
 
         ++this.env[0].ip;
     }
+
+    //console.log("[env]", this.env);
 
     this.dropEnv();
 }
 
 
 
-Kent.prototype.execute = function(cmd, args) {
+Kent.prototype.execute = function (first) {
 
-    return this.execBuiltin(cmd, args);
+    let token = this.env[0].code[this.env[0].ip];
+
+    if (token.type === "number") return new ReturnValue(Success, "number", token.number, true);
+
+    if (token.type === "string") return new ReturnValue(Success, "string", token.string, true);
+
+    if (token.type === "cmd") {
+
+        if (!token.gen) token.gen = this.cmd[token.cmd].newGen();
+
+        return this.backtrack(token.gen, this.cmd[token.cmd].param.length, [], this.env[0].ip);
+    }
+
+    return new ReturnValue(Failure);
 }
 
+// à un moment il faut dire à une branche de repartir à zéro, mais quand ?
+// différence entre l'appel à backtrack depuis execute / depuis backtrack ?
 
+Kent.prototype.backtrack = function(gen, argLeft, argSoFar, ip) {
 
-Kent.prototype.execBuiltin = function(cmd, args) {
+    if (argLeft > 0) { // we're currently collecting arguments recursively
 
-    if (cmd.path.length === 1 && this.builtin[cmd.path[0]])
-        return this.builtin[cmd.path[0]](args);
-    else
-        return null;
-}
+        let result = new ReturnValue(Pending);
+        let newArg = new ReturnValue(Pending);
 
+        while (!result.last && result.outcome !== Success) {
 
+            this.env[0].ip = ip+1
+            newArg = this.execute();
 
-Kent.prototype.builtin = {};
+            if (newArg.outcome === Failure) return new ReturnValue(Failure);
 
+            let oneMoreArg = argSoFar.concat([newArg]);
+            
+            result = this.backtrack(gen, argLeft - 1, oneMoreArg, this.env[0].ip);
+        }
+        return result;
 
+    } else { // we're done collecting arguments
 
-Kent.prototype.builtin.log = function(args) {
+        let result = new ReturnValue(Pending);
 
-    let txt = args[0].number || args[0].string || args;
-    console.log("[builtin log]", txt);
-    log(txt);
-}
-
-
-
-Kent.prototype.builtin.add = function(args) {
-
-    let sum = args[0].number + args[1].number;
-    console.log("[builtin add]", sum);
-    return [{
-        type: "number",
-        number: sum
-    }];
+        while (!result.last && result.outcome !== Success) {
+            result = gen.exec(argSoFar);
+        }
+        return result;
+    }
 }
 
 
@@ -210,147 +160,162 @@ Kent.prototype.dropEnv = function () {
 
 
 
-Kent.prototype.newEnv = function () {
+Kent.prototype.newEnv = function (rawcode) {
 
     this.env.unshift({
         ip: 0,
-        cmds: [],
-        args: []
+        code: rawcode.slice(0)
     });
 }
 
 
 
-Kent.prototype.getArity = function (token) {
+function ReturnValue(outcome, type, value, last) {
 
-    if (token.type !== "path") return 0;
-
-    if (token.path.length > 1) return 0; // HERE FETCH STUFF ../../../..
-
-    return this.baseArity[token.path[0]] || 0;
-}
-
-
-
-function BTNode(type, parent, content) {
-
+    this.outcome = outcome;
     this.type = type;
-    this.parent = parent;
-    this.children = [];
-    this.content = content;
-    if (parent) this.parent.children.push(this);
+    this.value = value;
+    this.last = last;
 }
 
 
 
-BTNode.prototype.tick = function () {
+Kent.prototype.cmd = {};
 
-    return this.typedTick[this.type](this);
+
+
+Kent.prototype.register = function (name, param, exe) {
+
+    this.cmd[name] = new GeneratorFactory(exe, param);
 }
 
 
 
-BTNode.prototype.typedTick = {};
+function GeneratorFactory(exe, param) {
+
+    this.exe = exe;
+    this.param = param;
+}
 
 
 
-BTNode.prototype.typedTick["js"] = function (node) {
+GeneratorFactory.prototype.newGen = function () {
 
-    window.thisNode = node;
+    return new Generator(this.exe);
+}
 
-    try {
 
-        return {
-            value: eval(node.content.js),
-            outcome: Success
-        };
 
-    } catch (err) {
+function Generator(exe) {
 
-        return {
-            error: err,
-            outcome: Failure
-        };
+    this.iter = 0;
+    this.exe = exe;
 
+    this.exec = function (args, first) {
+
+        if (first) this.iter = 0;
+
+        if (this.typeError(args, this.param))
+            return new ReturnValue(Failure);
+
+        let result = this.exe(args, this.iter);
+        ++this.iter;
+        return result;
     }
 }
 
 
 
-BTNode.prototype.typedTick["while"] = function (node) {
+Generator.prototype.typeError = function (arg, type) {
 
-    if (node.children.length === 0) return { outcome: Failure };
-
-    let status = { outcome: Success };
-    let c = 0;
-
-    while (status.outcome === Success) {
-
-        status = node.children[c].tick();
-        ++c;
-        if (c >= node.children.length) c = 0;
-    }
-    return { outcome: Success };
+    // check types
+    return false;
 }
 
 
 
-BTNode.prototype.typedTick["until"] = function (node) {
+Kent.prototype.register("log", ["any"], function (args, iter) {
 
-    if (node.children.length === 0) return { outcome: Failure };
+    console.log(args);
 
-    let status = { outcome: Success };
-    let c = 0;
-
-    while (status.outcome !== Success) {
-
-        status = node.children[c].tick();
-        ++c;
-        if (c >= node.children.length) c = 0;
-    }
-    return { outcome: Success };
-}
+    return new ReturnValue(
+        Success,
+        "void",
+        null,
+        true
+    )
+});
 
 
 
-BTNode.prototype.typedTick["seq"] = function (node) {
+Kent.prototype.register("dump", ["any"], function (args, iter) {
 
-    for (let child of node.children) {
+    console.log("[dump iterator]", iter);
+    
+    console.log(args);
 
-        let childStatus = child.tick();
-
-        if (childStatus.outcome === Running || childStatus.outcome === Failure) return childStatus;
-    }
-    return { outcome: Success };
-}
-
-
-
-BTNode.prototype.typedTick["goal"] = function (node) {
-
-    for (let child of node.children) {
-
-        let childStatus = child.tick();
-
-        if (childStatus.outcome === Running || childStatus.outcome === Success) return childStatus;
-    }
-    return Failure;
-}
+    return new ReturnValue(
+        args[0].last ? Success : Failure,
+        "void",
+        null,
+        args[0].last
+    )
+});
 
 
 
-BTNode.prototype.typedTick["all"] = function (node) {
+Kent.prototype.register("range", ["number", "number"], function (args, iter) {
 
-    let successCount = 0;
-    let threshold = (node.content && node.content.threshold) || 1;
+    console.log("[range iterator]", iter);
 
-    for (let child of node.children) {
+    return new ReturnValue(
+        Success,
+        "number",
+        args[0].value + iter,
+        iter >= args[1].value
+    )
+});
 
-        if (child.tick().outcome === Success) ++successCount;
-    }
 
-    return { outcome: (successCount >= threshold) ? Success : Failure };
-}
+
+Kent.prototype.register("add", ["number", "number"], function (args, iter) {
+
+    return new ReturnValue(
+        Success,
+        "number",
+        args[0].value + args[1].value,
+        true
+    )
+});
+
+
+
+Kent.prototype.register("lt", ["number", "number"], function (args, iter) {
+
+    return new ReturnValue(
+        args[0].value < args[1].value ? Success : Failure,
+        "number",
+        args[1],
+        true
+    )
+});
+
+
+
+Kent.prototype.register("gt", ["number", "number"], function (args, iter) {
+
+    return new ReturnValue(
+        args[0].value > args[1].value ? Success : Failure,
+        "number",
+        args[1],
+        true
+    )
+});
+
+
+
+
+
 
 
 
