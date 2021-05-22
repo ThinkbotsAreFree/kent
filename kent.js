@@ -8,6 +8,10 @@ const Pending = Symbol("Pending");
 
 
 
+var debugCount = 0;
+
+
+
 function Kent(src) {
 
     this.env = [];
@@ -87,7 +91,7 @@ Kent.prototype.executeScript = function (code) {
 
     while (this.env[0].ip < this.env[0].code.length) {
 
-        this.execute();
+        this.execute(true);
 
         ++this.env[0].ip;
     }
@@ -99,7 +103,7 @@ Kent.prototype.executeScript = function (code) {
 
 
 
-Kent.prototype.execute = function (first) {
+Kent.prototype.execute = function (firstExecute) {
 
     let token = this.env[0].code[this.env[0].ip];
 
@@ -111,43 +115,48 @@ Kent.prototype.execute = function (first) {
 
         if (!token.gen) token.gen = this.cmd[token.cmd].newGen();
 
-        return this.backtrack(token.gen, this.cmd[token.cmd].param.length, [], this.env[0].ip);
+        let first = firstExecute;
+        let result = new ReturnValue(Pending);
+        let ip = this.env[0].ip
+
+        while (!result.last && result.outcome !== Success) {
+
+            if (debugCount++ > 100) break;
+            this.env[0].ip = ip;
+            result = this.backtrack(token.gen, this.cmd[token.cmd].param.length, [], this.env[0].ip, first);
+            first = false;
+        }
+        return result;
     }
 
     return new ReturnValue(Failure);
 }
 
-// à un moment il faut dire à une branche de repartir à zéro, mais quand ?
-// différence entre l'appel à backtrack depuis execute / depuis backtrack ?
 
-Kent.prototype.backtrack = function(gen, argLeft, argSoFar, ip) {
+
+Kent.prototype.backtrack = function(gen, argLeft, argSoFar, ip, firstBacktrack) {
 
     if (argLeft > 0) { // we're currently collecting arguments recursively
 
-        let result = new ReturnValue(Pending);
         let newArg = new ReturnValue(Pending);
+        let first = firstBacktrack;
 
-        while (!result.last && result.outcome !== Success) {
+        while (!newArg.last && newArg.outcome !== Success) {
 
             this.env[0].ip = ip+1
-            newArg = this.execute();
-
-            if (newArg.outcome === Failure) return new ReturnValue(Failure);
-
-            let oneMoreArg = argSoFar.concat([newArg]);
-            
-            result = this.backtrack(gen, argLeft - 1, oneMoreArg, this.env[0].ip);
+            newArg = this.execute(first);
+            first = false;
         }
-        return result;
+
+        if (newArg.outcome === Failure) return new ReturnValue(Failure);
+
+        let oneMoreArg = argSoFar.concat([newArg]);
+        
+        return this.backtrack(gen, argLeft - 1, oneMoreArg, this.env[0].ip, firstBacktrack);
 
     } else { // we're done collecting arguments
 
-        let result = new ReturnValue(Pending);
-
-        while (!result.last && result.outcome !== Success) {
-            result = gen.exec(argSoFar);
-        }
-        return result;
+        return gen.exec(argSoFar, firstBacktrack);
     }
 }
 
@@ -215,8 +224,10 @@ function Generator(exe) {
 
         if (first) this.iter = 0;
 
-        if (this.typeError(args, this.param))
+        if (this.typeError(args, this.param)) {
+            ++this.iter;
             return new ReturnValue(Failure);
+        }
 
         let result = this.exe(args, this.iter);
         ++this.iter;
@@ -242,7 +253,7 @@ Kent.prototype.register("log", ["any"], function (args, iter) {
         Success,
         "void",
         null,
-        true
+        args[0].last
     )
 });
 
@@ -266,14 +277,14 @@ Kent.prototype.register("dump", ["any"], function (args, iter) {
 
 Kent.prototype.register("range", ["number", "number"], function (args, iter) {
 
-    console.log("[range iterator]", iter);
-
-    return new ReturnValue(
+    let result = new ReturnValue(
         Success,
         "number",
         args[0].value + iter,
         iter >= args[1].value
     )
+    ++iter;
+    return result;
 });
 
 
@@ -284,7 +295,7 @@ Kent.prototype.register("add", ["number", "number"], function (args, iter) {
         Success,
         "number",
         args[0].value + args[1].value,
-        true
+        args[0].last && args[1].last
     )
 });
 
@@ -295,8 +306,8 @@ Kent.prototype.register("lt", ["number", "number"], function (args, iter) {
     return new ReturnValue(
         args[0].value < args[1].value ? Success : Failure,
         "number",
-        args[1],
-        true
+        args[1].value,
+        args[0].last && args[1].last
     )
 });
 
@@ -307,8 +318,8 @@ Kent.prototype.register("gt", ["number", "number"], function (args, iter) {
     return new ReturnValue(
         args[0].value > args[1].value ? Success : Failure,
         "number",
-        args[1],
-        true
+        args[1].value,
+        args[0].last && args[1].last
     )
 });
 
